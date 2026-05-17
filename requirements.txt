@@ -1,0 +1,6 @@
+# RODA ISSO PRA BAIXAR TUDO DE UMA VEZ
+# pip install -r requirements.txt
+
+flask
+pymysql
+werkzeug
