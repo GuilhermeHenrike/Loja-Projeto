@@ -1,18 +1,18 @@
 from database import db
 from models.product import Product
 
-def cadastrar_produto(user_id, nome, descricao, preco):
-    if not user_id or not nome or not descricao or not preco:
+def cadastrar_produto(user_id, nome, descricao, preco, estoque, image_url = None):
+    if not user_id or not nome or not descricao or not preco or not estoque:
         return False
 
     conexao = db()
     try:
         with conexao.cursor() as cursor:
             sql = """
-            INSERT INTO products (user_id, name, description, price, created_at)
-            VALUES (%s, %s, %s, %s, NOW());
+            INSERT INTO products (user_id, name, description, price, stock, image_url, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, NOW());
             """
-            cursor.execute(sql, (user_id, nome, descricao, preco))
+            cursor.execute(sql, (user_id, nome, descricao, preco, estoque, image_url))
         conexao.commit()
         return True
     except:
@@ -58,7 +58,12 @@ def listar_produtos():
     conexao = db()
     try:
         with conexao.cursor() as cursor:
-            cursor.execute("SELECT id, user_id, name, description, price, created_at FROM products")
+            sql = """
+            SELECT id, user_id, name, description, price, stock, image_url, created_at 
+            FROM products 
+            WHERE stock > 0;
+            """
+            cursor.execute(sql) # roda o comando sql acima
             linhas = cursor.fetchall()
             
             produtos = []
@@ -70,6 +75,8 @@ def listar_produtos():
                         name=linha['name'],
                         description=linha['description'],
                         price=linha['price'],
+                        stock=linha['stock'],
+                        image_url=linha['image_url'],
                         created_at=linha['created_at']
                     )
                     produtos.append(prod)

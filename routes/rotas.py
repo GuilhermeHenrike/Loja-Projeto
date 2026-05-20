@@ -1,6 +1,9 @@
+import os
 from flask import request, jsonify
 from services.user_service import registro_user, logar_user
-from services.product_services import cadastrar_produto, editar_produto, excluir_produto, listar_produtos
+from services.product_service import cadastrar_produto, editar_produto, excluir_produto, listar_produtos
+
+UPLOAD_FOLDER = 'static/uploads'
 
 def carregar_rotas(app):
 
@@ -16,7 +19,7 @@ def carregar_rotas(app):
 
         # Se qualquer um deles não existir, for None ou for só espaços em branco aparece esse erro
         if not nome or not email or not password or not nome.strip() or not email.strip() or not password.strip():
-            return jsonify({'message': 'Erro ao cadastrar. Todos os campos (nome, email e senha) são obrigatórios!'}), 400
+            return jsonify({'message': 'Erro ao cadastrar, todos os campos são obrigatórios!'}), 400
 
         sucesso = registro_user(nome.strip(), email.strip(), password)
         # Se passou pela validação acima, aí entra aqui e registro_user recebe essas informações
@@ -40,7 +43,7 @@ def carregar_rotas(app):
 
 
         if not user_info:
-            return jsonify({'message': 'E-mail ou senha incorretos'}), 401
+            return jsonify({'message': 'Email ou senha incorretos'}), 401
         # se o user_info der erro é pq não achou um usuario com as informações e da essa mensagem acima
 
         
@@ -55,19 +58,31 @@ def carregar_rotas(app):
     # 3. Rota para cadastrar itens
     @app.route('/cadastrarItem', methods=['POST'])
     def cadastrar_item_rota():
-        dados = request.get_json() or {}
-        
-        user_id = dados.get('fkUser')
-        nome = dados.get('nomeProduto')
-        descricao = dados.get('descProd')
-        preco = dados.get('precoProd')
+        # pegando as informações do cadastrar_item_rota e transformando em variaveis
+        user_id = request.form.get('fkUser')
+        nome = request.form.get('nomeProduto')
+        descricao = request.form.get('descProd')
+        preco = request.form.get('precoProd')
+        estoque = request.form.get('estoqueProd')
 
         # validação de segurança igual a de registro
-        if not user_id or not nome or not descricao or not preco:
+        if not user_id or not nome or not descricao or not preco or not estoque:
             return jsonify({'erro': 'Todos os campos são obrigatórios'}), 400
 
-        # passa os dados limpos para o service fazer o INSERT
-        sucesso = cadastrar_produto(user_id, nome.strip(), descricao.strip(), preco)
+        image_url = None
+
+        # Se o Flutter mandar um arquivo de imagem, salva na pasta static
+        if 'image' in request.files:
+            arquivo = request.files['image']
+            if arquivo.filename != '':
+                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+                caminho = os.path.join(UPLOAD_FOLDER, arquivo.filename)
+                arquivo.save(caminho)
+                # Monta a URL pública da imagem
+                image_url = f"{request.url_root}{UPLOAD_FOLDER}/{arquivo.filename}"
+
+        # passa os dados limpos para o service fazer o INSERT com os novos parâmetros
+        sucesso = cadastrar_produto(user_id, nome.strip(), descricao.strip(), preco, estoque, image_url)
 
         if not sucesso:
             return jsonify({'erro': 'Erro ao cadastrar produto.'}), 500
@@ -98,34 +113,31 @@ def carregar_rotas(app):
 
 
     # 5. Rota para excluir itens
-    @app.route('/excluirItens', methods=['DELETE'])
+    @app.route('/excluirItem', methods=['DELETE'])
     def excluir_item_rota():
         dados = request.get_json() or {}
         produto_id = dados.get('id')
 
-        if not produto_id:
-            return jsonify({'erro': 'ID é obrigatório'}), 400
-
         # Chama o service para fazer o DELETE
         sucesso = excluir_produto(produto_id)
-
+        
         if not sucesso:
             return jsonify({'erro': 'Erro ao deletar o item.'}), 500
 
         return jsonify({'mensagem': 'Item deletado com sucesso'}), 200
     
-    @app.route('/produtos', methods=['GET'])
+    # 6. Rota para listar itens
+    @app.route('/listarProdutos', methods=['GET'])
     def listar_produtos_rota():
         produtos_objetos = listar_produtos()
-        
-        # se deu erro na execução do banco
+          
         if produtos_objetos is None:
-            return jsonify({'erro': 'Não foi possível carregar os produtos. Falha interna no servidor.'}), 500
-            
+            return jsonify({'erro': 'Erro interno ao carregar os produtos do banco.'}), 500
+
         # Se o banco funcionou, mas a tabela ta vazia
         if len(produtos_objetos) == 0:
             return jsonify({'mensagem': 'Nenhum produto cadastrado ainda.'}), 200
 
-        # s deu tudo certo e tem produtos, converte e envia a lista
+        # se deu tudo certo e tem produtos, converte usando o seu to_dict() e envia a lista
         produtos_json = [p.to_dict() for p in produtos_objetos]
         return jsonify(produtos_json), 200

@@ -6,7 +6,7 @@ def db():
     return pymysql.connect(
         host='127.0.0.1',
         user='root',         
-        password='12345678', # troca pra senha real do teu banco quando for testar, apanhei pra descobrir
+        password='Gilneide', # troca pra senha real do teu banco quando for testar, apanhei pra descobrir
         database='database_projeto', 
         cursorclass=pymysql.cursors.DictCursor 
     )
