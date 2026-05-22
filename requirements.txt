@@ -4,3 +4,4 @@
 flask
 pymysql
 werkzeug
+Flask-Cors

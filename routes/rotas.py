@@ -10,9 +10,7 @@ def carregar_rotas(app):
     # 1. rota de registro
     @app.route('/registro', methods=['POST'])
     def registro():
-        data = request.get_json() or {} # Recebe os dados do usuário
-        
-        # Pega os dados e limpa os espaços em branco com .strip()
+        data = request.get_json() or {} # da request do json para pegar as variaveis abaixo
         nome = data.get('nome')
         email = data.get('email')
         password = data.get('password')
@@ -58,53 +56,80 @@ def carregar_rotas(app):
     # 3. Rota para cadastrar itens
     @app.route('/cadastrarItem', methods=['POST'])
     def cadastrar_item_rota():
-        # pegando as informações do cadastrar_item_rota e transformando em variaveis
+        # pega os dados via form
         user_id = request.form.get('fkUser')
+        category_id = request.form.get('category_id')
         nome = request.form.get('nomeProduto')
         descricao = request.form.get('descProd')
         preco = request.form.get('precoProd')
         estoque = request.form.get('estoqueProd')
 
-        # validação de segurança igual a de registro
-        if not user_id or not nome or not descricao or not preco or not estoque:
+        # Validação de segurança
+        if not user_id or not nome or not descricao or not preco or not estoque or not category_id or not nome.strip() or not descricao.strip() if 'description' in locals() else not descricao.strip() or not str(category_id).strip():
             return jsonify({'erro': 'Todos os campos são obrigatórios'}), 400
 
         image_url = None
 
-        # Se o Flutter mandar um arquivo de imagem, salva na pasta static
         if 'image' in request.files:
             arquivo = request.files['image']
             if arquivo.filename != '':
                 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
                 caminho = os.path.join(UPLOAD_FOLDER, arquivo.filename)
                 arquivo.save(caminho)
-                # Monta a URL pública da imagem
                 image_url = f"{request.url_root}{UPLOAD_FOLDER}/{arquivo.filename}"
 
-        # passa os dados limpos para o service fazer o INSERT com os novos parâmetros
-        sucesso = cadastrar_produto(user_id, nome.strip(), descricao.strip(), preco, estoque, image_url)
+        # chama o service atualizado usando os argumentos nomeados
+        sucesso = cadastrar_produto(
+            user_id=user_id,
+            category_id=category_id.strip(),
+            nome=nome.strip(),
+            descricao=descricao.strip(),
+            preco=preco,
+            estoque=estoque,
+            image_url=image_url
+        )
 
         if not sucesso:
             return jsonify({'erro': 'Erro ao cadastrar produto.'}), 500
-        # entra aqui em qualquer erro do metodo
 
         return jsonify({'mensagem': 'Cadastro realizado com sucesso'}), 201
-        # retorna mensagem de sucesso
-
 
     # 4. Rota para editar itens
-    @app.route('/editarItem', methods=['PUT'])
+    @app.route('/editarItem', methods=['POST'])  
     def editar_item_rota():
-        dados = request.get_json() or {}
-        
-        produto_id = dados.get('id')
-        novo_nome = dados.get('nomeProduto')
+        # pega os dados via form
+        product_id = request.form.get('id')
+        category_id = request.form.get('category_id')
+        name = request.form.get('nomeProduto')
+        description = request.form.get('descProd')
+        price = request.form.get('precoProd')
+        stock = request.form.get('estoqueProd')
 
-        if not produto_id or not novo_nome or not novo_nome.strip():
-            return jsonify({'erro': 'ID e nome são obrigatórios'}), 400
+        # validação de segurança
+        if not product_id or not category_id or not name or not description or not price or not stock or not name.strip() or not description.strip() or not str(category_id).strip():
+            return jsonify({'erro': 'Todos os campos são obrigatórios para a edição'}), 400
 
-        # Chama o service para fazer o UPDATE
-        sucesso = editar_produto(produto_id, novo_nome.strip())
+        image_url = None
+
+        # Se o usuário escolheu uma NOVA imagem no flutter
+        if 'image' in request.files:
+            arquivo = request.files['image']
+            if arquivo.filename != '':
+                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+                caminho = os.path.join(UPLOAD_FOLDER, arquivo.filename)
+                arquivo.save(caminho)
+                image_url = f"{request.url_root}{UPLOAD_FOLDER}/{arquivo.filename}"
+
+        # chama o service atualizado usando os argumentos nomeados
+        sucesso = editar_produto(
+            produto_id=product_id,
+            category_id=category_id.strip(),
+            nome=name.strip(),
+            descricao=description.strip(),
+            preco=price,
+            estoque=stock,
+            image_url=image_url
+        )
 
         if not sucesso:
             return jsonify({'erro': 'Erro ao atualizar o item.'}), 500
@@ -118,7 +143,7 @@ def carregar_rotas(app):
         dados = request.get_json() or {}
         produto_id = dados.get('id')
 
-        # Chama o service para fazer o DELETE
+        # Chama o service para fazer o DELETE pelo id do produto
         sucesso = excluir_produto(produto_id)
         
         if not sucesso:
@@ -138,6 +163,6 @@ def carregar_rotas(app):
         if len(produtos_objetos) == 0:
             return jsonify({'mensagem': 'Nenhum produto cadastrado ainda.'}), 200
 
-        # se deu tudo certo e tem produtos, converte usando o seu to_dict() e envia a lista
+        # se deu tudo certo e tem produtos, converte usando o to_dict() e envia a lista
         produtos_json = [p.to_dict() for p in produtos_objetos]
         return jsonify(produtos_json), 200
