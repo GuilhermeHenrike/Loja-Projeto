@@ -1,6 +1,6 @@
 import os
 from flask import request, jsonify
-from services.user_service import registro_user, logar_user
+from services.user_service import registro_user, logar_user, verificar_vendedor
 from services.product_service import cadastrar_produto, editar_produto, excluir_produto, listar_produtos
 
 UPLOAD_FOLDER = 'static/uploads'
@@ -14,12 +14,16 @@ def carregar_rotas(app):
         nome = data.get('nome')
         email = data.get('email')
         password = data.get('password')
+        user_type = data.get('user_type', 'cliente')
 
         # Se qualquer um deles não existir, for None ou for só espaços em branco aparece esse erro
         if not nome or not email or not password or not nome.strip() or not email.strip() or not password.strip():
             return jsonify({'message': 'Erro ao cadastrar, todos os campos são obrigatórios!'}), 400
 
-        sucesso = registro_user(nome.strip(), email.strip(), password)
+        if user_type not in ['vendedor', 'cliente']:
+            return jsonify({'message': 'Erro ao cadastrar, tipo de usuário inválido!'}), 400
+
+        sucesso = registro_user(nome.strip(), email.strip(), password, user_type)
         # Se passou pela validação acima, aí entra aqui e registro_user recebe essas informações
 
         if not sucesso:
@@ -68,6 +72,9 @@ def carregar_rotas(app):
         if not user_id or not nome or not descricao or not preco or not estoque or not category_id or not nome.strip() or not descricao.strip() if 'description' in locals() else not descricao.strip() or not str(category_id).strip():
             return jsonify({'erro': 'Todos os campos são obrigatórios'}), 400
 
+        if not verificar_vendedor(user_id):
+            return jsonify({'erro': 'Apenas usuários do tipo vendedor podem cadastrar produtos.'}), 403
+
         image_url = None
 
         if 'image' in request.files:
@@ -98,6 +105,7 @@ def carregar_rotas(app):
     @app.route('/editarItem', methods=['POST'])  
     def editar_item_rota():
         # pega os dados via form
+        user_id = request.form.get('fkUser')
         product_id = request.form.get('id')
         category_id = request.form.get('category_id')
         name = request.form.get('nomeProduto')
@@ -108,6 +116,9 @@ def carregar_rotas(app):
         # validação de segurança
         if not product_id or not category_id or not name or not description or not price or not stock or not name.strip() or not description.strip() or not str(category_id).strip():
             return jsonify({'erro': 'Todos os campos são obrigatórios para a edição'}), 400
+
+        if not verificar_vendedor(user_id):
+            return jsonify({'erro': 'Apenas usuários do tipo vendedor podem editar produtos.'}), 403
 
         image_url = None
 
@@ -141,7 +152,11 @@ def carregar_rotas(app):
     @app.route('/excluirItem', methods=['DELETE'])
     def excluir_item_rota():
         dados = request.get_json() or {}
+        user_id = dados.get('fkUser') 
         produto_id = dados.get('id')
+
+        if not verificar_vendedor(user_id):
+            return jsonify({'erro': 'Apenas usuários do tipo vendedor podem excluir produtos.'}), 403
 
         # Chama o service para fazer o DELETE pelo id do produto
         sucesso = excluir_produto(produto_id)
