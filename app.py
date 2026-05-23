@@ -1,4 +1,5 @@
 from flask import Flask
+from flask_cors import CORS
 from routes.rotas import carregar_rotas
 from flask_cors import CORS
 from flask_mail import Mail
