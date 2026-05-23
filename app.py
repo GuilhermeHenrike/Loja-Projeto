@@ -6,7 +6,7 @@ from flask_mail import Mail
 app = Flask(__name__)
 CORS(app)
 
-# CONFIGURAÇÃO DO EMAIL (FAZ ISSO AQUI, NÃO NA ROTA)
+
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True

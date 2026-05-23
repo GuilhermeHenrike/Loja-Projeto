@@ -163,7 +163,7 @@ def carregar_rotas(app, mail):
 
                 msg.body = f'Seu código de recuperação de senha é: {codigo_recuperacao}'
 
-                # USA O MAIL QUE VEIO DO APP (SEM CRIAR OUTRO)
+                
                 mail.send(msg)
 
                 return jsonify({'mensagem': 'Email enviado com sucesso!'})
@@ -174,7 +174,7 @@ def carregar_rotas(app, mail):
         except Exception as e:
             return jsonify({
                 'mensagem': 'Erro ao enviar email de recuperação.',
-                'erro': str(e)  # AGORA VAI MOSTRAR O ERRO REAL
+                'erro': str(e)  
             })
 
         finally:
