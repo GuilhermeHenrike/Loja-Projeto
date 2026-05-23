@@ -1,8 +1,12 @@
-from flask import request, jsonify
+import email
+
+from flask import app, request, jsonify
 from services.user_service import registro_user, logar_user
 from services.product_services import cadastrar_produto, editar_produto, excluir_produto, listar_produtos
-
-def carregar_rotas(app):
+from flask_mail import Mail, Message
+import random
+from database import db
+def carregar_rotas(app, mail):
 
     # 1. rota de registro
     @app.route('/registro', methods=['POST'])
@@ -129,3 +133,49 @@ def carregar_rotas(app):
         # s deu tudo certo e tem produtos, converte e envia a lista
         produtos_json = [p.to_dict() for p in produtos_objetos]
         return jsonify(produtos_json), 200
+    
+    @app.route('/recuperarSenha', methods=['POST'])
+    def recuperarSenha():
+
+        global codigo_recuperacao
+
+        dadosRecebidos = request.get_json() or {}
+        email = dadosRecebidos.get('email')
+
+        if not email or not email.strip():
+            return jsonify({'mensagem': 'Email é obrigatório'}), 400
+
+        banco = db()
+        cursor = banco.cursor()
+
+        try:
+            cursor.execute("SELECT id, name, email FROM users WHERE email = %s", (email,))
+            resultado = cursor.fetchone()
+
+            if resultado:
+                codigo_recuperacao = random.randint(100000, 999999)
+
+                msg = Message(
+                    subject='Recuperação de senha',
+                    sender="nyedsomwander@gmail.com",
+                    recipients=[email]
+                )
+
+                msg.body = f'Seu código de recuperação de senha é: {codigo_recuperacao}'
+
+                # USA O MAIL QUE VEIO DO APP (SEM CRIAR OUTRO)
+                mail.send(msg)
+
+                return jsonify({'mensagem': 'Email enviado com sucesso!'})
+
+            else:
+                return jsonify({'mensagem': 'Email não encontrado.'})
+
+        except Exception as e:
+            return jsonify({
+                'mensagem': 'Erro ao enviar email de recuperação.',
+                'erro': str(e)  # AGORA VAI MOSTRAR O ERRO REAL
+            })
+
+        finally:
+            banco.close()

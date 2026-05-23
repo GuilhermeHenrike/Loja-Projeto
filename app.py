@@ -1,9 +1,21 @@
 from flask import Flask
 from routes.rotas import carregar_rotas
+from flask_cors import CORS
+from flask_mail import Mail
 
 app = Flask(__name__)
+CORS(app)
 
-carregar_rotas(app)
+# CONFIGURAÇÃO DO EMAIL (FAZ ISSO AQUI, NÃO NA ROTA)
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'nyedsomwander@gmail.com'
+app.config['MAIL_PASSWORD'] = 'kjes ebpr hoxp ertu'
+
+mail = Mail(app)
+
+carregar_rotas(app, mail)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
