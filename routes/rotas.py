@@ -1,11 +1,13 @@
 import os
 from flask import request, jsonify
 from services.user_service import registro_user, logar_user, verificar_vendedor
-from services.product_service import cadastrar_produto, editar_produto, excluir_produto, listar_produtos
+from services.product_service import cadastrar_produto, editar_produto, excluir_produto, listar_produtos, comprar, verificar_cliente
 
 UPLOAD_FOLDER = 'static/uploads'
 
 def carregar_rotas(app):
+
+    # ================================== ROTAS DE VENDEDOR ==================================
 
     # 1. rota de registro
     @app.route('/registro', methods=['POST'])
@@ -22,7 +24,7 @@ def carregar_rotas(app):
 
         if user_type not in ['vendedor', 'cliente']:
             return jsonify({'message': 'Erro ao cadastrar, tipo de usuário inválido!'}), 400
-
+        
         sucesso = registro_user(nome.strip(), email.strip(), password, user_type)
         # Se passou pela validação acima, aí entra aqui e registro_user recebe essas informações
 
@@ -181,3 +183,27 @@ def carregar_rotas(app):
         # se deu tudo certo e tem produtos, converte usando o to_dict() e envia a lista
         produtos_json = [p.to_dict() for p in produtos_objetos]
         return jsonify(produtos_json), 200
+    
+    # ================================== ROTAS DE CLIENTES ==================================
+
+    # 7. Rota para o cliente comprar um produto (Diminuir estoque)
+    @app.route('/comprarItem', methods=['POST'])
+    def comprar_item_rota():
+        dados = request.get_json() or {}
+        user_id = dados.get('fkUser')
+        product_id = dados.get('id')
+        quantidade = dados.get('quantidade', 1) # assume que o usuario ta comprando um, até pq n da pra comprar 0
+
+        # só pode comprar se for do tipo cliente
+        if not verificar_cliente(user_id):
+            return jsonify({'erro': 'Apenas usuários do tipo cliente podem comprar produtos.'}), 403
+
+        # manda o id do produto que ta sendo comprado e a quantidade pra o metodo comprar
+        resultado = comprar(product_id=product_id, quantidade_comprada=quantidade)
+
+        # se der algum erro, retorna essa mensagem de erro
+        if not resultado['sucesso']:
+            return jsonify({'erro': resultado['erro']}), 400
+
+        # se deu tudo certo, responde com sucesso para o flutter
+        return jsonify({'mensagem': 'Compra realizada com sucesso!'}), 200

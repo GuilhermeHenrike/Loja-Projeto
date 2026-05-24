@@ -56,6 +56,49 @@ def editar_produto(produto_id, category_id, nome, descricao, preco, estoque, ima
     finally:
         conexao.close()
 
+def verificar_cliente(user_id):
+    # vê se o usuário existe e é do tipo cliente
+    if not user_id:
+        return False
+    conexao = db()
+    try:
+        with conexao.cursor() as cursor:
+            cursor.execute("SELECT user_type FROM users WHERE id = %s", (user_id,))
+            resultado = cursor.fetchone()
+            return resultado and resultado['user_type'] == 'cliente'
+    except Exception:
+        return False
+    finally:
+        conexao.close()
+
+def comprar(product_id, quantidade_comprada=1):
+    conexao = db()
+    try:
+        with conexao.cursor() as cursor:
+            # Verifica se o produto existe e se tem estoque
+            cursor.execute("SELECT stock FROM products WHERE id = %s", (product_id,))
+            produto = cursor.fetchone()
+
+            if not produto:
+                return {"sucesso": False, "erro": "Produto não encontrado."}
+
+            estoque_atual = int(produto['stock'])
+            
+            if estoque_atual < int(quantidade_comprada):
+                return {"sucesso": False, "erro": "Desculpe, este produto acabou de esgotar!"}
+
+            # subtrai o estoque no banco de dados
+            sql = "UPDATE products SET stock = stock - %s WHERE id = %s"
+            cursor.execute(sql, (quantidade_comprada, product_id))
+            
+        conexao.commit()
+        return {"sucesso": True}
+    except Exception as e:
+        print(f"Erro ao atualizar estoque na compra: {e}")
+        return {"sucesso": False, "erro": "Erro interno ao processar a compra."}
+    finally:
+        conexao.close()
+
 
 def excluir_produto(produto_id):
     # se não tiver Id ele retorna nada
@@ -109,3 +152,4 @@ def listar_produtos():
         return None
     finally:
         conexao.close()
+
