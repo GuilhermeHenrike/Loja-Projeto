@@ -1,4 +1,6 @@
 
+import email
+
 from flask_mail import Mail, Message
 import random
 from database import db
@@ -6,6 +8,7 @@ import os
 from flask import request, jsonify
 from services.user_service import registro_user, logar_user, verificar_vendedor
 from services.product_service import cadastrar_produto, editar_produto, excluir_produto, listar_produtos
+from werkzeug.security import generate_password_hash
 
 UPLOAD_FOLDER = 'static/uploads'
 
@@ -230,3 +233,57 @@ def carregar_rotas(app, mail):
 
         finally:
             banco.close()
+
+
+    @app.route('/verificarCodigo', methods=['POST'])
+    def verificar_codigo():
+        global codigo_recuperacao
+
+        dados = request.get_json()
+        codigo = dados.get("codigo")
+
+        print("Código recebido:", codigo)
+        print("Código correto:", codigo_recuperacao)
+
+        if str(codigo) == str(codigo_recuperacao):
+            return jsonify({"valido": True}), 200
+        else:
+            return jsonify({"valido": False}), 200
+        
+
+
+    @app.route('/redefinirSenha', methods = ['POST'])
+    def redefinir_senha():
+        dados = request.get_json()
+
+        email = dados.get('email')
+        nova_senha = dados.get('senha')
+
+        if not email or not nova_senha:
+            return jsonify({'mensagem' : 'o email e senha são campos obrigatórios'}), 400
+
+        # 🔥 CRIPTOGRAFA A SENHA
+        senha_hash = generate_password_hash(nova_senha)
+
+        banco = db()
+        cursor = banco.cursor()
+
+        try:
+            cursor.execute(
+                "UPDATE users SET password_hash = %s WHERE email = %s",
+                (senha_hash, email)
+            )
+            banco.commit()
+
+            return jsonify({'mensagem': 'Senha redefinida com sucesso!'})
+
+        except Exception as e:
+            return jsonify({ "erro" : str(e)})
+
+        finally:
+            banco.close()
+
+
+
+
+          
