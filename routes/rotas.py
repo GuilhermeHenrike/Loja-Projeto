@@ -7,12 +7,16 @@ from database import db
 import os
 from flask import request, jsonify
 from services.user_service import registro_user, logar_user, verificar_vendedor
-from services.product_service import cadastrar_produto, editar_produto, excluir_produto, listar_produtos
+from services.product_service import cadastrar_produto, editar_produto, excluir_produto, listar_produtos, comprar, verificar_cliente
 from werkzeug.security import generate_password_hash
 
 UPLOAD_FOLDER = 'static/uploads'
 
 def carregar_rotas(app, mail):
+
+
+    # ================================== ROTAS DE USUARIOS ==================================
+
     # 1. rota de registro
     @app.route('/registro', methods=['POST'])
     def registro():
@@ -28,7 +32,7 @@ def carregar_rotas(app, mail):
 
         if user_type not in ['vendedor', 'cliente']:
             return jsonify({'message': 'Erro ao cadastrar, tipo de usuário inválido!'}), 400
-
+        
         sucesso = registro_user(nome.strip(), email.strip(), password, user_type)
         # Se passou pela validação acima, aí entra aqui e registro_user recebe essas informações
 
@@ -38,7 +42,6 @@ def carregar_rotas(app, mail):
 
         return jsonify({'message': 'Usuário cadastrado com sucesso!'}), 201
         # sucesso deu sucesso e o metodo registro_user salva o usuario no banco
-
 
     # 2. rota de login
     @app.route('/login', methods=['POST'])
@@ -61,96 +64,93 @@ def carregar_rotas(app, mail):
             'user': user_info.to_dict()
         }), 200
     
+    # ================================== ROTAS DE VENDEDOR ==================================
+
+
+     # 8. Rota para listar produtos de um vendedor específico
+    @app.route('/listarProdutosVendedor', methods=['GET'])
+    def listar_produtos_vendedor_rota():
+        user_id = request.args.get('userId')
+        
+        if not user_id:
+            return jsonify({'erro': 'ID do vendedor não fornecido'}), 400
+
+        produtos_objetos = listar_produtos()
+        
+        # filtro para pegar os produtos só do usuario logado pelo ID dele
+        produtos_do_vendedor = [p.to_dict() for p in produtos_objetos if str(p.user_id) == str(user_id)]
+        
+        return jsonify(produtos_do_vendedor), 200
+
+
     # ================================== ROTAS DE PRODUTOS ==================================
 
     # 3. Rota para cadastrar itens
     @app.route('/cadastrarItem', methods=['POST'])
     def cadastrar_item_rota():
-        # pega os dados via form
-        user_id = request.form.get('fkUser')
-        category_id = request.form.get('category_id')
-        nome = request.form.get('nomeProduto')
-        descricao = request.form.get('descProd')
-        preco = request.form.get('precoProd')
-        estoque = request.form.get('estoqueProd')
+        data = request.get_json() or {}
+        print(f"DEBUG RECEBIDO: {data}")
+        
+        user_id = data.get('fkUser')
+        category_id = data.get('category_id')
+        nome = data.get('nome')          
+        descricao = data.get('descricao')
+        preco = data.get('preco')        
+        estoque = data.get('estoque')  
 
-        # Validação de segurança
-        if not user_id or not nome or not descricao or not preco or not estoque or not category_id or not nome.strip() or not descricao.strip() if 'description' in locals() else not descricao.strip() or not str(category_id).strip():
+        # Validação segura
+        if not all([user_id, nome, descricao, preco, estoque, category_id]):
+            print(f"DEBUG: Falha. Dados: {user_id}, {nome}, {descricao}, {preco}, {estoque}, {category_id}")
             return jsonify({'erro': 'Todos os campos são obrigatórios'}), 400
 
         if not verificar_vendedor(user_id):
-            return jsonify({'erro': 'Apenas usuários do tipo vendedor podem cadastrar produtos.'}), 403
+            return jsonify({'erro': 'Apenas vendedores podem cadastrar.'}), 403
 
-        image_url = None
-
-        if 'image' in request.files:
-            arquivo = request.files['image']
-            if arquivo.filename != '':
-                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-                caminho = os.path.join(UPLOAD_FOLDER, arquivo.filename)
-                arquivo.save(caminho)
-                image_url = f"{request.url_root}{UPLOAD_FOLDER}/{arquivo.filename}"
-
-        # chama o service atualizado usando os argumentos nomeados
+        # Chamada ao Service
         sucesso = cadastrar_produto(
-            user_id=user_id,
-            category_id=category_id.strip(),
-            nome=nome.strip(),
-            descricao=descricao.strip(),
-            preco=preco,
-            estoque=estoque,
-            image_url=image_url
+            user_id=str(user_id),
+            category_id=str(category_id).strip(),
+            nome=str(nome).strip(),
+            descricao=str(descricao).strip(),
+            preco=str(preco),
+            estoque=str(estoque),
+            image_url=None
         )
 
         if not sucesso:
             return jsonify({'erro': 'Erro ao cadastrar produto.'}), 500
-
         return jsonify({'mensagem': 'Cadastro realizado com sucesso'}), 201
 
     # 4. Rota para editar itens
     @app.route('/editarItem', methods=['POST'])  
     def editar_item_rota():
-        # pega os dados via form
-        user_id = request.form.get('fkUser')
-        product_id = request.form.get('id')
-        category_id = request.form.get('category_id')
-        name = request.form.get('nomeProduto')
-        description = request.form.get('descProd')
-        price = request.form.get('precoProd')
-        stock = request.form.get('estoqueProd')
+        data = request.get_json() or {}
+        user_id = data.get('fkUser')
+        product_id = data.get('id')
+        category_id = data.get('category_id')
+        name = data.get('nomeProduto')
+        description = data.get('descProd')
+        price = data.get('precoProd')
+        stock = data.get('estoqueProd')
 
-        # validação de segurança
-        if not product_id or not category_id or not name or not description or not price or not stock or not name.strip() or not description.strip() or not str(category_id).strip():
-            return jsonify({'erro': 'Todos os campos são obrigatórios para a edição'}), 400
+        if not all([product_id, category_id, name, description, price, stock]):
+            return jsonify({'erro': 'Todos os campos são obrigatórios'}), 400
 
         if not verificar_vendedor(user_id):
-            return jsonify({'erro': 'Apenas usuários do tipo vendedor podem editar produtos.'}), 403
+            return jsonify({'erro': 'Apenas vendedores podem editar.'}), 403
 
-        image_url = None
-
-        # Se o usuário escolheu uma NOVA imagem no flutter
-        if 'image' in request.files:
-            arquivo = request.files['image']
-            if arquivo.filename != '':
-                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-                caminho = os.path.join(UPLOAD_FOLDER, arquivo.filename)
-                arquivo.save(caminho)
-                image_url = f"{request.url_root}{UPLOAD_FOLDER}/{arquivo.filename}"
-
-        # chama o service atualizado usando os argumentos nomeados
         sucesso = editar_produto(
             produto_id=product_id,
-            category_id=category_id.strip(),
-            nome=name.strip(),
-            descricao=description.strip(),
-            preco=price,
-            estoque=stock,
-            image_url=image_url
+            category_id=str(category_id).strip(),
+            nome=str(name).strip(),
+            descricao=str(description).strip(),
+            preco=str(price),
+            estoque=str(stock),
+            image_url=None
         )
 
         if not sucesso:
             return jsonify({'erro': 'Erro ao atualizar o item.'}), 500
-
         return jsonify({'mensagem': 'Item atualizado com sucesso'}), 200
 
 
@@ -287,3 +287,28 @@ def carregar_rotas(app, mail):
 
 
           
+    # ================================== ROTAS DE CLIENTES ==================================
+
+    # 7. Rota para o cliente comprar um produto (Diminuir estoque)
+    @app.route('/comprarItem', methods=['POST'])
+    def comprar_item_rota():
+        dados = request.get_json() or {}
+        user_id = dados.get('fkUser')
+        product_id = dados.get('id')
+        quantidade = dados.get('quantidade', 1) # assume que o usuario ta comprando um, até pq n da pra comprar 0
+
+        # só pode comprar se for do tipo cliente
+        if not verificar_cliente(user_id):
+            return jsonify({'erro': 'Apenas usuários do tipo cliente podem comprar produtos.'}), 403
+
+        # manda o id do produto que ta sendo comprado e a quantidade pra o metodo comprar
+        resultado = comprar(product_id=product_id, quantidade_comprada=quantidade)
+
+        # se der algum erro, retorna essa mensagem de erro
+        if not resultado['sucesso']:
+            return jsonify({'erro': resultado['erro']}), 400
+
+        # se deu tudo certo, responde com sucesso para o flutter
+        return jsonify({'mensagem': 'Compra realizada com sucesso!'}), 200
+    
+    
