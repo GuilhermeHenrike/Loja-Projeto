@@ -4,4 +4,5 @@
 flask
 pymysql
 werkzeug
-Flask-Cors
+flask-cors
+flask-mail
