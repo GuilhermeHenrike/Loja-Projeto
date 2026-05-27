@@ -295,20 +295,31 @@ def carregar_rotas(app, mail):
         dados = request.get_json() or {}
         user_id = dados.get('fkUser')
         product_id = dados.get('id')
-        quantidade = dados.get('quantidade', 1) # assume que o usuario ta comprando um, até pq n da pra comprar 0
+        quantidade = int(dados.get('quantidade', 1))
 
-        # só pode comprar se for do tipo cliente
+        # só pode comprar se for cliente
         if not verificar_cliente(user_id):
             return jsonify({'erro': 'Apenas usuários do tipo cliente podem comprar produtos.'}), 403
 
-        # manda o id do produto que ta sendo comprado e a quantidade pra o metodo comprar
-        resultado = comprar(product_id=product_id, quantidade_comprada=quantidade)
+        # 🔥 SE FOR CANCELAMENTO (NEGATIVO)
+        if quantidade < 0:
+            resultado = comprar(
+                product_id=product_id,
+                quantidade_comprada=quantidade  # negativo
+            )
 
-        # se der algum erro, retorna essa mensagem de erro
+            if not resultado['sucesso']:
+                return jsonify({'erro': resultado['erro']}), 400
+
+            return jsonify({'mensagem': 'Item removido do carrinho!'}), 200
+
+        # 🔥 COMPRA NORMAL (POSITIVO)
+        resultado = comprar(
+            product_id=product_id,
+            quantidade_comprada=quantidade
+        )
+
         if not resultado['sucesso']:
             return jsonify({'erro': resultado['erro']}), 400
 
-        # se deu tudo certo, responde com sucesso para o flutter
         return jsonify({'mensagem': 'Compra realizada com sucesso!'}), 200
-    
-    

@@ -75,7 +75,7 @@ def comprar(product_id, quantidade_comprada=1):
     conexao = db()
     try:
         with conexao.cursor() as cursor:
-            # Verifica se o produto existe e se tem estoque
+            # Busca produto
             cursor.execute("SELECT stock FROM products WHERE id = %s", (product_id,))
             produto = cursor.fetchone()
 
@@ -83,19 +83,31 @@ def comprar(product_id, quantidade_comprada=1):
                 return {"sucesso": False, "erro": "Produto não encontrado."}
 
             estoque_atual = int(produto['stock'])
-            
-            if estoque_atual < int(quantidade_comprada):
-                return {"sucesso": False, "erro": "Desculpe, este produto acabou de esgotar!"}
+            quantidade = int(quantidade_comprada)
 
-            # subtrai o estoque no banco de dados
-            sql = "UPDATE products SET stock = stock - %s WHERE id = %s"
-            cursor.execute(sql, (quantidade_comprada, product_id))
-            
+            # 🔥 COMPRA NORMAL
+            if quantidade > 0:
+                if estoque_atual < quantidade:
+                    return {"sucesso": False, "erro": "Desculpe, este produto acabou de esgotar!"}
+
+            # 🔥 CANCELAMENTO (quantidade negativa)
+            # aqui NÃO precisa validar estoque
+
+            # 🔥 ATUALIZA ESTOQUE (funciona pros dois casos)
+            novo_estoque = estoque_atual - quantidade
+
+            cursor.execute(
+                "UPDATE products SET stock = %s WHERE id = %s",
+                (novo_estoque, product_id)
+            )
+
         conexao.commit()
         return {"sucesso": True}
+
     except Exception as e:
         print(f"Erro ao atualizar estoque na compra: {e}")
         return {"sucesso": False, "erro": "Erro interno ao processar a compra."}
+
     finally:
         conexao.close()
 
