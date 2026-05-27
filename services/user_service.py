@@ -71,3 +71,4 @@ def logar_user(email, password): # função de login de usuario que recebe "emai
         return None
     finally:
         conexao.close() # fechando a conexao
+

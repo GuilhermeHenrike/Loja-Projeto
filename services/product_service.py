@@ -135,9 +135,11 @@ def listar_produtos():
     try:
         with conexao.cursor() as cursor:
             sql = """
-            SELECT id, user_id, category_id, name, description, price, stock, image_url, created_at 
-            FROM products 
-            WHERE stock > 0;
+            SELECT p.id, p.user_id, p.category_id, p.name, p.description, 
+                   p.price, p.stock, p.image_url, p.created_at, c.name as category_name
+            FROM products p
+            INNER JOIN categories c ON p.category_id = c.id
+            WHERE p.stock > 0;
             """
             cursor.execute(sql) # roda o comando sql acima
             linhas = cursor.fetchall()
@@ -151,7 +153,8 @@ def listar_produtos():
                         name=linha['name'],
                         description=linha['description'],
                         price=linha['price'],
-                        category_name=str(linha['category_id']),
+                        category_id=linha['category_id'],
+                        category_name=linha['category_name'],
                         stock=linha['stock'],
                         image_url=linha['image_url'],
                         created_at=linha['created_at']
@@ -165,3 +168,19 @@ def listar_produtos():
     finally:
         conexao.close()
 
+def buscar_todas_categorias():
+    conexao = db()
+    try:
+        with conexao.cursor() as cursor:
+            
+            print("DEBUG: Executando SELECT id, name FROM categories")
+            cursor.execute("SELECT id, name FROM categories")
+            resultados = cursor.fetchall()
+            
+            return [{'id': r['id'], 'name': r['name']} for r in resultados]
+    except Exception as e:
+        # Mostra o erro
+        print(f"ERRO NO BACKEND: {str(e)}")
+        return []
+    finally:
+        conexao.close()

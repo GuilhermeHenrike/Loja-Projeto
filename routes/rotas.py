@@ -7,7 +7,7 @@ from database import db
 import os
 from flask import request, jsonify
 from services.user_service import registro_user, logar_user, verificar_vendedor
-from services.product_service import cadastrar_produto, editar_produto, excluir_produto, listar_produtos, comprar, verificar_cliente
+from services.product_service import cadastrar_produto, editar_produto, excluir_produto, listar_produtos, comprar, verificar_cliente, buscar_todas_categorias
 from werkzeug.security import generate_password_hash
 
 UPLOAD_FOLDER = 'static/uploads'
@@ -323,3 +323,14 @@ def carregar_rotas(app, mail):
             return jsonify({'erro': resultado['erro']}), 400
 
         return jsonify({'mensagem': 'Compra realizada com sucesso!'}), 200
+    
+    # ================================== ROTAS DE CATEGORIAS ==================================
+
+
+    @app.route('/listarCategorias', methods=['GET'])
+    def listar_categorias_rota():
+        try:
+            categories = buscar_todas_categorias()
+            return jsonify(categories), 200
+        except Exception as e:
+            return jsonify({'erro': str(e)}), 500
