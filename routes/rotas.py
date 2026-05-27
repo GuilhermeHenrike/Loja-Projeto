@@ -262,7 +262,7 @@ def carregar_rotas(app, mail):
         if not email or not nova_senha:
             return jsonify({'mensagem' : 'o email e senha são campos obrigatórios'}), 400
 
-        # 🔥 CRIPTOGRAFA A SENHA
+    
         senha_hash = generate_password_hash(nova_senha)
 
         banco = db()
@@ -301,7 +301,6 @@ def carregar_rotas(app, mail):
         if not verificar_cliente(user_id):
             return jsonify({'erro': 'Apenas usuários do tipo cliente podem comprar produtos.'}), 403
 
-        # 🔥 SE FOR CANCELAMENTO (NEGATIVO)
         if quantidade < 0:
             resultado = comprar(
                 product_id=product_id,
@@ -313,7 +312,6 @@ def carregar_rotas(app, mail):
 
             return jsonify({'mensagem': 'Item removido do carrinho!'}), 200
 
-        # 🔥 COMPRA NORMAL (POSITIVO)
         resultado = comprar(
             product_id=product_id,
             quantidade_comprada=quantidade

@@ -85,15 +85,12 @@ def comprar(product_id, quantidade_comprada=1):
             estoque_atual = int(produto['stock'])
             quantidade = int(quantidade_comprada)
 
-            # 🔥 COMPRA NORMAL
+
             if quantidade > 0:
                 if estoque_atual < quantidade:
                     return {"sucesso": False, "erro": "Desculpe, este produto acabou de esgotar!"}
 
-            # 🔥 CANCELAMENTO (quantidade negativa)
-            # aqui NÃO precisa validar estoque
-
-            # 🔥 ATUALIZA ESTOQUE (funciona pros dois casos)
+        
             novo_estoque = estoque_atual - quantidade
 
             cursor.execute(
