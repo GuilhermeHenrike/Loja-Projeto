@@ -4,16 +4,12 @@ import email
 from flask_mail import Mail, Message
 import random
 from database import db
-import os
 from flask import request, jsonify
 from services.user_service import registro_user, logar_user, verificar_vendedor
 from services.product_service import cadastrar_produto, editar_produto, excluir_produto, listar_produtos, comprar, verificar_cliente, buscar_todas_categorias
 from werkzeug.security import generate_password_hash
 
-UPLOAD_FOLDER = 'static/uploads'
-
 def carregar_rotas(app, mail):
-
 
     # ================================== ROTAS DE USUARIOS ==================================
 
@@ -114,7 +110,6 @@ def carregar_rotas(app, mail):
             descricao=str(descricao).strip(),
             preco=str(preco),
             estoque=str(estoque),
-            image_url=None
         )
 
         if not sucesso:
@@ -146,7 +141,6 @@ def carregar_rotas(app, mail):
             descricao=str(description).strip(),
             preco=str(price),
             estoque=str(stock),
-            image_url=None
         )
 
         if not sucesso:
