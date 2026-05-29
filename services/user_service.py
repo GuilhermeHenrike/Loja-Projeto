@@ -2,28 +2,6 @@ from database import db
 from models.user import User
 from werkzeug.security import generate_password_hash, check_password_hash
 
-def verificar_vendedor(user_id):
-    if not user_id:
-        return False
-
-    conexao = db()
-    try:
-        with conexao.cursor() as cursor:
-            # busca o usuario pelo id dele no banco de dados
-            cursor.execute("SELECT user_type FROM users WHERE id = %s", (user_id,))
-            resultado = cursor.fetchone()
-            
-            # Se achou o usuário e o tipo dele for exatamente 'vendedor', retorna True
-            if resultado and resultado['user_type'] == 'vendedor':
-                return True
-                
-        return False # Se não for vendedor ou não achar o usuário, retorna False
-    except Exception as e:
-        print(f"Erro ao verificar permissão: {e}")
-        return False
-    finally:
-        conexao.close()
-
 # função de registro de usuario que recebe "name", "email", "password" e "user_type"
 def registro_user(name, email, password, user_type='cliente'): 
     if not name or not email or not password: # se qualquer um não existir ele retorna nada e para
@@ -72,3 +50,39 @@ def logar_user(email, password): # função de login de usuario que recebe "emai
     finally:
         conexao.close() # fechando a conexao
 
+def verificar_cliente(user_id):
+    # vê se o usuário existe e é do tipo cliente
+    if not user_id:
+        return False
+    conexao = db()
+    try:
+        with conexao.cursor() as cursor:
+            cursor.execute("SELECT user_type FROM users WHERE id = %s", (user_id,))
+            resultado = cursor.fetchone()
+            return resultado and resultado['user_type'] == 'cliente'
+    except Exception:
+        return False
+    finally:
+        conexao.close()
+
+def verificar_vendedor(user_id):
+    if not user_id:
+        return False
+
+    conexao = db()
+    try:
+        with conexao.cursor() as cursor:
+            # busca o usuario pelo id dele no banco de dados
+            cursor.execute("SELECT user_type FROM users WHERE id = %s", (user_id,))
+            resultado = cursor.fetchone()
+            
+            # Se achou o usuário e o tipo dele for exatamente 'vendedor', retorna True
+            if resultado and resultado['user_type'] == 'vendedor':
+                return True
+                
+        return False # Se não for vendedor ou não achar o usuário, retorna False
+    except Exception as e:
+        print(f"Erro ao verificar permissão: {e}")
+        return False
+    finally:
+        conexao.close()

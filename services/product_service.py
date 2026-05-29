@@ -46,21 +46,6 @@ def editar_produto(produto_id, category_id, nome, descricao, preco, estoque):
     finally:
         conexao.close()
 
-def verificar_cliente(user_id):
-    # vê se o usuário existe e é do tipo cliente
-    if not user_id:
-        return False
-    conexao = db()
-    try:
-        with conexao.cursor() as cursor:
-            cursor.execute("SELECT user_type FROM users WHERE id = %s", (user_id,))
-            resultado = cursor.fetchone()
-            return resultado and resultado['user_type'] == 'cliente'
-    except Exception:
-        return False
-    finally:
-        conexao.close()
-
 def comprar(product_id, quantidade_comprada=1):
     conexao = db()
     try:
