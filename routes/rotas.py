@@ -117,7 +117,7 @@ def carregar_rotas(app, mail):
         return jsonify({'mensagem': 'Cadastro realizado com sucesso'}), 201
 
     # 4. Rota para editar itens
-    @app.route('/editarItem', methods=['POST'])  
+    @app.route('/editarItem', methods=['PUT'])  
     def editar_item_rota():
         data = request.get_json() or {}
         user_id = data.get('fkUser')
