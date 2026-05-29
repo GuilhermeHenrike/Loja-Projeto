@@ -4,7 +4,7 @@ from database import db
 def carregar_rotas_carrinho(app):
 
    # ================= CARRINHO =================
-
+    # versao funcionalllllllllllllllllllllllll
     @app.route('/carrinho/adicionar', methods=['POST'])
     def adicionar_carrinho():
         data = request.get_json()
@@ -24,22 +24,50 @@ def carregar_rotas_carrinho(app):
             cursor = banco.cursor()
 
             cursor.execute("""
-                INSERT INTO cart_items (user_id, product_id, quantity)
-                VALUES (%s, %s, %s)
-            """, (user_id, product_id, quantidade))
+                SELECT id, quantity
+                FROM cart_items
+                WHERE user_id = %s AND product_id = %s
+            """, (user_id, product_id))
+
+            item = cursor.fetchone()
+
+            if item:
+               
+                if isinstance(item, dict):
+                    item_id = item["id"]
+                    quantidade_atual = int(item["quantity"])
+                else:
+                    item_id = item[0]
+                    quantidade_atual = int(item[1])
+
+                novo_total = quantidade_atual + int(quantidade)
+
+                cursor.execute("""
+                    UPDATE cart_items
+                    SET quantity = %s
+                    WHERE id = %s
+                """, (novo_total, item_id))
+
+            else:
+                cursor.execute("""
+                    INSERT INTO cart_items (user_id, product_id, quantity)
+                    VALUES (%s, %s, %s)
+                """, (user_id, product_id, quantidade))
 
             banco.commit()
 
-            return jsonify({"msg": "Item adicionado"}), 200
+            return jsonify({"msg": "Carrinho atualizado"}), 200
 
         except Exception as e:
-            return jsonify({"erro": str(e)}), 500
+            print("ERRO ADD:", repr(e))
+            return jsonify({"erro": repr(e)}), 500
 
         finally:
             if cursor:
                 cursor.close()
             if banco:
                 banco.close()
+
 
     @app.route('/carrinho/listar', methods=['GET'])
     def listar_carrinho():
@@ -69,12 +97,11 @@ def carregar_rotas_carrinho(app):
 
             rows = cursor.fetchall()
 
-            print("ROWS:", rows)  # 🔥 DEBUG
+            print("ROWS:", rows)
 
             resultado = []
 
             for row in rows:
-                # 🔥 AGORA USANDO COMO DICIONÁRIO
                 resultado.append({
                     "id": int(row["id"]),
                     "name": str(row["name"]),
@@ -93,6 +120,10 @@ def carregar_rotas_carrinho(app):
                 cursor.close()
             if banco:
                 banco.close()
+
+
+
+
     @app.route('/carrinho/remover', methods=['DELETE'])
     def remover_carrinho():
         data = request.get_json()
@@ -121,3 +152,34 @@ def carregar_rotas_carrinho(app):
                 cursor.close()
             if banco:
                 banco.close()
+
+    @app.route('/carrinho/atualizar', methods=['PUT'])
+    def atualizar_quantidade():
+        data = request.get_json()
+
+        item_id = data.get('id')
+        quantidade = data.get('quantidade')
+
+        if not item_id or quantidade is None:
+            return jsonify({"erro": "dados incompletos"}), 400
+
+        try:
+            banco = db()
+            cursor = banco.cursor()
+
+            cursor.execute("""
+                UPDATE cart_items
+                SET quantity = %s
+                WHERE id = %s
+            """, (quantidade, item_id))
+
+            banco.commit()
+
+            return jsonify({"msg": "Quantidade atualizada"}), 200
+
+        except Exception as e:
+            return jsonify({"erro": str(e)}), 500
+
+        finally:
+            cursor.close()
+            banco.close()
