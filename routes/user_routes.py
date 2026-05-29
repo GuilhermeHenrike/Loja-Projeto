@@ -4,7 +4,7 @@ from flask_mail import Mail, Message
 import random
 from database import db
 from flask import request, jsonify
-from services.user_service import registro_user, logar_user
+from services.user_service import registro_user, logar_user, excluir_usuario
 from werkzeug.security import generate_password_hash
 
 def carregar_rotas_usuario(app, mail):
@@ -122,7 +122,7 @@ def carregar_rotas_usuario(app, mail):
         
 
 
-    @app.route('/redefinirSenha', methods = ['POST'])
+    @app.route('/redefinirSenha', methods = ['PUT'])
     def redefinir_senha():
         dados = request.get_json()
 
@@ -152,3 +152,21 @@ def carregar_rotas_usuario(app, mail):
 
         finally:
             banco.close()
+
+# 6. rota para deletar usuário com confirmação de senha
+    @app.route('/deletar_conta/<int:id_usuario>', methods=['DELETE'])
+    def deletar_conta(id_usuario):
+        # Pegamos a senha enviada de forma segura pelo Header da requisição
+        senha = request.headers.get('X-Senha-Confirmacao')
+
+        if not id_usuario or not senha:
+            return jsonify({'mensagem': 'ID do usuário e senha são obrigatórios.'}), 400
+
+        # Invoca a mesma lógica simplificada que está no seu user_service
+        resultado = excluir_usuario(id_usuario, senha)
+
+        if resultado["sucesso"]:
+            return jsonify({'mensagem': resultado["mensagem"]}), 200
+        else:
+            status_code = 500 if "Erro interno" in resultado["mensagem"] else 400
+            return jsonify({'mensagem': resultado["mensagem"]}), status_code
