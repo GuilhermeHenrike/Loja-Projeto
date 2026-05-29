@@ -1,7 +1,7 @@
 from database import db
 from models.product import Product
 
-def cadastrar_produto(user_id, category_id, nome, descricao, preco, estoque, image_url = None):
+def cadastrar_produto(user_id, category_id, nome, descricao, preco, estoque):
     # todos os atributos precisam existir
     if not user_id or not category_id or not nome or not descricao or not preco or not estoque:
         return False
@@ -10,10 +10,10 @@ def cadastrar_produto(user_id, category_id, nome, descricao, preco, estoque, ima
     try:
         with conexao.cursor() as cursor:
             sql = """
-            INSERT INTO products (user_id, category_id, name, description, price, stock, image_url, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, NOW());
+            INSERT INTO products (user_id, category_id, name, description, price, stock, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, NOW());
             """
-            cursor.execute(sql, (user_id, category_id, nome, descricao, preco, estoque, image_url))
+            cursor.execute(sql, (user_id, category_id, nome, descricao, preco, estoque))
         conexao.commit()
         return True
     except Exception as e:
@@ -23,7 +23,7 @@ def cadastrar_produto(user_id, category_id, nome, descricao, preco, estoque, ima
         conexao.close()
 
 
-def editar_produto(produto_id, category_id, nome, descricao, preco, estoque, image_url=None):
+def editar_produto(produto_id, category_id, nome, descricao, preco, estoque):
     # todos os atributos precisam existir
     if not produto_id or not category_id or not nome or not descricao or not preco or not estoque:
         return False
@@ -31,16 +31,6 @@ def editar_produto(produto_id, category_id, nome, descricao, preco, estoque, ima
     conexao = db()
     try:
         with conexao.cursor() as cursor:
-            # Se uma nova imagem foi enviada, atualiza tudo incluindo a imagem
-            if image_url:
-                sql = """
-                UPDATE products 
-                SET category_id = %s, name = %s, description = %s, price = %s, stock = %s, image_url = %s
-                WHERE id = %s;
-                """
-                cursor.execute(sql, (category_id, nome, descricao, preco, estoque, image_url, produto_id))
-            else:
-                # Se não mandou imagem, atualiza os dados e mantém a imagem antiga
                 sql = """
                 UPDATE products 
                 SET category_id = %s, name = %s, description = %s, price = %s, stock = %s
@@ -52,21 +42,6 @@ def editar_produto(produto_id, category_id, nome, descricao, preco, estoque, ima
         return True
     except Exception as e:
         print(f"Erro ao editar: {e}")
-        return False
-    finally:
-        conexao.close()
-
-def verificar_cliente(user_id):
-    # vê se o usuário existe e é do tipo cliente
-    if not user_id:
-        return False
-    conexao = db()
-    try:
-        with conexao.cursor() as cursor:
-            cursor.execute("SELECT user_type FROM users WHERE id = %s", (user_id,))
-            resultado = cursor.fetchone()
-            return resultado and resultado['user_type'] == 'cliente'
-    except Exception:
         return False
     finally:
         conexao.close()
@@ -133,7 +108,7 @@ def listar_produtos():
         with conexao.cursor() as cursor:
             sql = """
             SELECT p.id, p.user_id, p.category_id, p.name, p.description, 
-                   p.price, p.stock, p.image_url, p.created_at, c.name as category_name
+                   p.price, p.stock, p.created_at, c.name as category_name
             FROM products p
             INNER JOIN categories c ON p.category_id = c.id
             WHERE p.stock > 0;
@@ -153,7 +128,6 @@ def listar_produtos():
                         category_id=linha['category_id'],
                         category_name=linha['category_name'],
                         stock=linha['stock'],
-                        image_url=linha['image_url'],
                         created_at=linha['created_at']
                     )
                     produtos.append(prod)

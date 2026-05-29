@@ -1,6 +1,8 @@
 from flask import Flask
 from flask_cors import CORS
-from routes.rotas import carregar_rotas
+from routes.product_routes import carregar_rotas_produto
+from routes.user_routes import carregar_rotas_usuario
+from routes.cart_routes import carregar_rotas_carrinho
 from flask_cors import CORS
 from flask_mail import Mail
 
@@ -16,7 +18,10 @@ app.config['MAIL_PASSWORD'] = 'kjes ebpr hoxp ertu'
 
 mail = Mail(app)
 
-carregar_rotas(app, mail)
+carregar_rotas_usuario(app, mail)
+carregar_rotas_produto(app)
+carregar_rotas_carrinho(app)
+
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000, debug=True)
