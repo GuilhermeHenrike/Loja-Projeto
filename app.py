@@ -3,6 +3,7 @@ from flask_cors import CORS
 from routes.product_routes import carregar_rotas_produto
 from routes.user_routes import carregar_rotas_usuario
 from routes.cart_routes import carregar_rotas_carrinho
+from routes.categories_routes import carregar_rotas_categories
 from flask_cors import CORS
 from flask_mail import Mail
 
@@ -21,6 +22,7 @@ mail = Mail(app)
 carregar_rotas_usuario(app, mail)
 carregar_rotas_produto(app)
 carregar_rotas_carrinho(app)
+carregar_rotas_categories(app)
 
 
 if __name__ == '__main__':
