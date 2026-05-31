@@ -153,7 +153,7 @@ def carregar_rotas_usuario(app, mail):
         finally:
             banco.close()
 
-# 6. rota para deletar usuário com confirmação de senha
+    # 6. rota para deletar usuário com confirmação de senha
     @app.route('/deletar_conta/<int:id_usuario>', methods=['DELETE'])
     def deletar_conta(id_usuario):
         # Pegamos a senha enviada de forma segura pelo Header da requisição
@@ -170,3 +170,31 @@ def carregar_rotas_usuario(app, mail):
         else:
             status_code = 500 if "Erro interno" in resultado["mensagem"] else 400
             return jsonify({'mensagem': resultado["mensagem"]}), status_code
+        
+
+# =================== ROTAS DE CHECAR SE O USUARIO EXISTE E LOGOUT ==================================
+
+        
+    # Rota para verificar se o usuário ainda existe no banco (vai gardar pref no flutter)
+    @app.route('/verificar_sessao/<int:id_usuario>', methods=['GET'])
+    def verificar_sessao(id_usuario):
+        conexao = db()
+        cursor = conexao.cursor()
+        try:
+            cursor.execute("SELECT id FROM users WHERE id = %s", (id_usuario,))
+            usuario = cursor.fetchone()
+            
+            if usuario:
+                return jsonify({"ativo": True}), 200
+            else:
+                return jsonify({"ativo": False}), 401
+        except Exception as e:
+            return jsonify({"erro": str(e)}), 500
+        finally:
+            cursor.close()
+            conexao.close()
+
+    # 8. Rota de logoff (vai apagar as pref do verificar_sessao)
+    @app.route('/logoff', methods=['POST'])
+    def logoff():
+        return jsonify({"mensagem": "Logoff realizado com sucesso no servidor!"}), 200

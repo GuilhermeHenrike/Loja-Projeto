@@ -110,21 +110,22 @@ def carregar_rotas_produto(app):
 
         return jsonify({'mensagem': 'Item deletado com sucesso'}), 200
     
-    # 6. Rota para listar itens
+# 6. Rota para listar itens
     @app.route('/listarProdutos', methods=['GET'])
     def listar_produtos_rota():
-        produtos_objetos = listar_produtos()
+        produtos_objetos = listar_produtos() # Agora traz tudo, inclusive estoque 0
           
         if produtos_objetos is None:
             return jsonify({'erro': 'Erro interno ao carregar os produtos do banco.'}), 500
 
-        # Se o banco funcionou, mas a tabela ta vazia
-        if len(produtos_objetos) == 0:
-            return jsonify({'mensagem': 'Nenhum produto cadastrado ainda.'}), 200
+        # FILTRO: Apenas produtos com estoque > 0 para o cliente
+        produtos_disponiveis = [p.to_dict() for p in produtos_objetos if p.stock > 0]
 
-        # se deu tudo certo e tem produtos, converte usando o to_dict() e envia a lista
-        produtos_json = [p.to_dict() for p in produtos_objetos]
-        return jsonify(produtos_json), 200
+        if len(produtos_disponiveis) == 0:
+            return jsonify({'mensagem': 'Nenhum produto disponível no momento.'}), 200
+
+        # Envia apenas a lista filtrada
+        return jsonify(produtos_disponiveis), 200
 
     # ================================== ROTAS DE CLIENTES ==================================
 
@@ -134,29 +135,18 @@ def carregar_rotas_produto(app):
         dados = request.get_json() or {}
         user_id = dados.get('fkUser')
         product_id = dados.get('id')
-        quantidade = int(dados.get('quantidade', 1))
+        quantidade = dados.get('quantidade', 1) # assume que o usuario ta comprando um, até pq n da pra comprar 0
 
-        # só pode comprar se for cliente
+        # só pode comprar se for do tipo cliente
         if not verificar_cliente(user_id):
             return jsonify({'erro': 'Apenas usuários do tipo cliente podem comprar produtos.'}), 403
 
-        if quantidade < 0:
-            resultado = comprar(
-                product_id=product_id,
-                quantidade_comprada=quantidade  # negativo
-            )
+        # manda o id do produto que ta sendo comprado e a quantidade pra o metodo comprar
+        resultado = comprar(product_id=product_id, quantidade_comprada=quantidade)
 
-            if not resultado['sucesso']:
-                return jsonify({'erro': resultado['erro']}), 400
-
-            return jsonify({'mensagem': 'Item removido do carrinho!'}), 200
-
-        resultado = comprar(
-            product_id=product_id,
-            quantidade_comprada=quantidade
-        )
-
+        # se der algum erro, retorna essa mensagem de erro
         if not resultado['sucesso']:
             return jsonify({'erro': resultado['erro']}), 400
 
+        # se deu tudo certo, responde com sucesso para o flutter
         return jsonify({'mensagem': 'Compra realizada com sucesso!'}), 200

@@ -110,10 +110,9 @@ def listar_produtos():
             SELECT p.id, p.user_id, p.category_id, p.name, p.description, 
                    p.price, p.stock, p.created_at, c.name as category_name
             FROM products p
-            INNER JOIN categories c ON p.category_id = c.id
-            WHERE p.stock > 0;
+            INNER JOIN categories c ON p.category_id = c.id;
             """
-            cursor.execute(sql) # roda o comando sql acima
+            cursor.execute(sql)
             linhas = cursor.fetchall()
             
             produtos = []
